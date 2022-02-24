@@ -1,0 +1,185 @@
+---
+title: "Intersection between carbon, people and forests"
+output: 
+  flexdashboard::flex_dashboard:
+    vertical_layout: scroll
+    theme: cosmo
+
+    
+self_contained: true
+---
+
+<style type="text/css"> .sidebar { overflow: auto; } </style>
+
+    
+```{r global, include=FALSE}
+library(rgdal)
+library(raster)
+library(htmlwidgets)
+library(leaflet)
+library(tidyverse)
+library(sf)
+library(tmaptools)
+
+
+```
+
+The map
+========================================================
+
+## blah
+
+<font size="6"> Exploring carbon, forests and people  </font>
+
+
+
+```{r theMap,  message=FALSE, warning=FALSE, fig.height=7.5, fig.width=11}
+
+
+## read in shapes
+blockgroups_reduced_simple <- st_read("data/blockgroups_reduced_simple.shp", quiet = TRUE)%>%
+                             st_transform(CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+forest50nonwhite70reduced <- st_read("data/forest50nonwhite70.shp", quiet = TRUE)%>%
+                             st_transform(CRS("+proj=longlat +datum=WGS84 +ellps=WGS84 +towgs84=0,0,0"))
+
+## make shape for 50-70% non-white, >50% forest by joining in filtered .csv
+nonwhite50_70atts <- read_csv("C://carbonBlockGroups/data/nonwhite50-70.csv")
+
+forest50nonwhite50_70 <- merge(blockgroups_reduced_simple, nonwhite50_70atts, by = 'GEOID')
+
+## bins for carbon 
+bins <- c(0, 20, 40, 60, 80, 100)
+pal <- colorBin("Greens", domain = blockgroups_reduced_simple$CrbnPKM, bins = bins)
+
+## make popup
+popup <- paste(
+  "Percent Non-white", blockgroups_reduced_simple$PrcntNW, "<br>",
+  "Amount of carbon", blockgroups_reduced_simple$CrbnPKM, "<br>",
+  "Percent Riparian", blockgroups_reduced_simple$PrcntRp, "<br>",
+  "Percent Conifer", blockgroups_reduced_simple$PrcntCn, "<br>",
+  "Percent Hardwood", blockgroups_reduced_simple$PrcntHr, "<br>",
+  "Percent Conifer-Hardwood", blockgroups_reduced_simple$PrcntCH
+  )
+
+
+popupNW70 <-
+  paste(
+  "Percent Non-white", forest50nonwhite70reduced$pct_nonWhi, "<br>",
+  "Amount of carbon", forest50nonwhite70reduced$sumCarPeKm, "<br>",
+  "Percent Riparian", forest50nonwhite70reduced$ripariaPct, "<br>",
+  "Percent Conifer", forest50nonwhite70reduced$coniferPct, "<br>",
+  "Percent Hardwood", forest50nonwhite70reduced$hardwooPct, "<br>", 
+  "Percent Conifer-Hardwood", forest50nonwhite70reduced$coniHarPct
+  )
+
+popupNW50_70 <-   paste(
+  "Percent Non-white",forest50nonwhite50_70$pct_nonWhi , "<br>",
+  "Amount of carbon",forest50nonwhite50_70$CrbnPKM , "<br>",
+  "Percent Riparian",forest50nonwhite50_70$PrcntRp , "<br>",
+  "Percent Conifer",forest50nonwhite50_70$PrcntCn , "<br>",
+  "Percent Hardwood",forest50nonwhite50_70$PrcntHr,  "<br>", 
+  "Percent Conifer-Hardwood",forest50nonwhite50_70$PrcntCH 
+  )
+  
+
+## the map
+mapForLiz <-
+  leaflet(blockgroups_reduced_simple) %>%
+  addProviderTiles(providers$OpenStreetMap.Mapnik) %>%
+  #addProviderTiles(providers$CartoDB.Positron) %>%
+  setView(-81.0260447, 33.983476, zoom = 7) %>%  
+  addPolygons(
+    data = blockgroups_reduced_simple,
+    fillColor = ~pal(CrbnPKM),
+    fillOpacity = 1, 
+    weight = 0.6,
+    opacity = 0.8,
+    color = "grey", 
+    popup = ~popup) %>%
+  addPolygons(
+    data = forest50nonwhite70reduced,
+    fillOpacity = 0, 
+    weight = 1,
+    opacity = 1,
+    color = "#a503fc",
+    popup = ~popupNW70) %>%
+  addPolygons(
+    data = forest50nonwhite50_70,
+    fillOpacity = 0, 
+    weight = 1,
+    opacity = 1,
+    color = "#f1a340",
+    popup = ~popupNW50_70) %>%
+  addLegend(
+    pal = pal,
+    values = ~CrbnPKM,
+    position = "bottomright",
+    opacity = 1,
+    title = "Tons of carbon per SQKM") 
+
+mapForLiz
+
+```
+<br>
+
+
+
+Column {.sidebar}
+-----------------------------------------------------------------------
+
+### <b><font  size="4em" color="#000000">This map depicts amount of carbon per block group.
+
+* Purple highlighted polygons are areas with > 70% non-white population and > 50% forested land cover
+* Orange highlighted polygons are areas with 50-70% non-white population and > 50% forested land cover
+
+Click highlighted block groups for more information.</font></b>
+
+<br>
+This map was made by Maddie Tango and Steven Wilmer of [Middlebury College](https://www.middlebury.edu/#story645114) and [the Conservation Data Lab](https://conservationdatalab.org/) using data from the [US Census Bureau](https://www.census.gov/), the [Center for Resilient Conservation Science](https://crcs.tnc.org/) and the [LANDFIRE](https://landfire.gov/) Program. 
+
+For more details on the authors/analysts, data and methods see the About tab.
+
+
+About
+========================================================
+
+## blah
+
+<font size="6"> More information about the people, data and methods  </font>
+
+This project was conceived by Liz Kalies and Randy Swaty, November, 2021 as a way to explore the intersection between carbon, forest type and people.  Maddie Tango and Steven Morales Morantes were responsible for GIS analysis, conceptualization and mapping, Randy for conceptualization and the dashboard, and Liz for conceptualization and outreach. 
+
+Please contact Liz Kalies (elizabeth.kalies@TNC.ORG) and/or Randy Swaty (rswaty@tnc.org) with any questions.  
+
+### The analysts
+
+**Maddie** is a recent graduate of Middlebury College where she earned a B.A. in Conservation Biology with a Geography minor and a member of the [Conservation Data Lab](https://conservationdatalab.org/). She has experience as a data analyst, remote sensing research assistant, Google Earth Engine intern and much more. See her linkedIn profile at https://www.linkedin.com/in/madeleinetango/, and her (extensive-she is very productive!) open sourced GIS profile at https://mtango99.github.io/.  
+
+**Steven** is a senior at Middlebury college working towards a B.A. in Environmental Studies and Geography with a minor in Portuguese, and serves as a GIS teaching assistant.  Steven has a robust GIS/remote sensing portfolio you can peruse at https://wmontillamorantes.myportfolio.com/a. You can also learn more about him at https://www.linkedin.com/in/steven-montilla-172437150/.
+<br>
+
+*Maddie and Steven completed all of this work in an amazingly short amount of time as volunteers-we are very grateful!*
+
+### The data
+
+To map carbon we used data downloaded from https://maps.tnc.org/resilientland/.  You can learn more about the carbon data at https://maps.tnc.org/resilientland/coreConcepts_carbon.html
+
+The full citation for the carbon data is:
+Gu, H., Williams, C. A., Hasler, N., & Zhou, Y. (2019). The carbon balance of the southeastern U.S. forest sector as driven by recent disturbance trends. Journal of Geophysical Research: Biogeosciences, 124, 2786– 2803. https://doi.org/10.1029/2018JG004841
+
+The forest type was obtained from the 2016 Existing Vegetation Type data developed and delivered by the [LANDFIRE](https://landfire.gov/) program.  You can learn more about the dataset at https://landfire.gov/evt.php.  We used the "EVT_PHYS" attribute.
+
+Demographics data and block groups polygons were obtained from the [U.S. Census Bureau](https://www.census.gov/).  More specifically we used [block groups](https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2020&layergroup=Block+Groups) data.  
+
+### Methods
+All work was completed in open sourced tools, R, R-Studio and QGIS with free datasets.  Full workflow can be obtained [here](https://docs.google.com/document/d/1jlg-I4u5DMjyPQSzHvNuqVOcZqnv_8hw/edit?usp=sharing&ouid=117245291966623234433&rtpof=true&sd=true).
+
+<br>
+<br>
+
+**Maddie and Steven**
+
+![](maddie.jpg){width=400px} ![](steven.jpg){width=400px}
+
+
+
